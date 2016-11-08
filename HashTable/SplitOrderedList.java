@@ -30,6 +30,9 @@ public class SplitOrderedList<K,V> implements Map<K,V> {
         return x.hashCode() & MASK;
     }
     public V put(K key, V value) {
+	if(value==null) {
+                throw new NullPointerException();
+            }
         int index = makeRegularIndex(key);
         boolean splice;
         while (true) {
