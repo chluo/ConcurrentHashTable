@@ -110,7 +110,9 @@ public class newMain {
         hashtableList.add(new LockFreeHashTable<>(max_num_buckets));
         hashtableList.add(new CoarseHashTable<>(size_of_hashtable));
         hashtableList.add(new RefinableHashTable<>(size_of_hashtable));
-
+        hashtableList.add(new StripedCuckooHashTable<Integer, Integer>(size_of_hashtable));
+        hashtableList.add(new RefinableCuckooHashTable<Integer, Integer>(size_of_hashtable));
+        //hashtableList.add(new CoarseCuckooHashTable<Integer, Integer>(size_of_hashtable));
 
 		/*
 		 * threadpool for synchronization
@@ -130,7 +132,7 @@ public class newMain {
                 }
                 // get thread
                 for(int i = 0; i < num_of_addthread; i++){
-                    curThread = new putThread(num_per_get, hashtableList.get(curHashTableIndex));
+                    curThread = new getThread(num_per_get, hashtableList.get(curHashTableIndex));
                     threadPool.add(curThread);
                     curThread.start();
                 }
@@ -161,6 +163,9 @@ public class newMain {
                 case 0: System.out.println("LockFreeHashTable -----------------------------"); break;
                 case 1: System.out.println("CoarseHashTable -------------------------------"); break;
                 case 2: System.out.println("RefinableHashTable ----------------------------"); break;
+                case 3: System.out.println("StripedCuckooHashTable ----------------------------"); break;
+                case 4: System.out.println("RefinableCuckooHashTable ----------------------------"); break;
+                //case 4: System.out.println("CoarseCuckooHashTable ----------------------------"); break;
             }
 
             System.out.println("- Time Used: " + (double)totalTime/runs_per_algorithm/1000000 + " Milliseconds");
