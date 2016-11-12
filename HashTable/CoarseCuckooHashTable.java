@@ -1,3 +1,5 @@
+package HashTable;
+
 import java.lang.ref.Reference;
 import java.util.Iterator;
 import java.util.Objects;
@@ -69,7 +71,7 @@ public class CoarseCuckooHashTable<K,V> implements Map<K,V> {
                 }
             }
             System.out.println("uh-oh");
-            throw new CoarseCuckooHashSet.CuckooException();
+            throw new CoarseCuckooHashTable.CuckooException();
             //return null;
         } finally {
             lock.unlock();

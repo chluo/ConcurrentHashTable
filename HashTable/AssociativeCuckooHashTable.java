@@ -4,9 +4,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Created by Liheng on 11/8/16.
+ * Created by Chunheng on 11/11, 2016
  */
-public abstract class PhasedCuckooHashTable<K,V> implements Map<K,V> {
+public abstract class AssociativeCuckooHashTable<K,V> implements Map<K,V> {
     volatile int capacity;
     volatile List<Entry<K,V>>[][] table;
     // resize when overflow reaches this size
@@ -23,7 +23,7 @@ public abstract class PhasedCuckooHashTable<K,V> implements Map<K,V> {
      * Create new set holding at least this many entries.
      * @param size number of entries to expect
      */
-    public PhasedCuckooHashTable(int size) {
+    public AssociativeCuckooHashTable(int size) {
         capacity = size;
         table = (List<Entry<K,V>>[][]) new java.util.ArrayList[2][capacity];
         for (int i = 0; i < 2; i++) {
@@ -176,16 +176,38 @@ public abstract class PhasedCuckooHashTable<K,V> implements Map<K,V> {
     public abstract void resize();
 
     protected boolean relocate(int i, int hi) {
-        int hj = 0;
         int j = 1 - i;
         for (int round = 0; round < LIMIT; round++) {
             List<Entry<K,V>> iSet = table[i][hi];
-            Entry<K,V> entry = iSet.get(0);
-            K key = entry.key;
-            switch (i) {
-                case 0: hj = hash1(entry.key) % capacity; break;
-                case 1: hj = hash0(entry.key) % capacity; break;
+            
+            /** 
+             * Replacement policy: Least Occupied Set (LOS) 
+             */ 
+            int min_size = PROBE_SIZE; 
+            int min_set_index = 0; 
+            int hj = 0; 
+            for (int entry_index = 0; entry_index < iSet.size(); entry_index++) {
+            	Entry<K, V> entry_check = iSet.get(entry_index); 
+            	int hj_check = 0; 
+                switch (i) {
+                	case 0: hj_check = hash1(entry_check.key) % capacity; break;
+                	case 1: hj_check = hash0(entry_check.key) % capacity; break;
+                }
+                int set_size = table[j][hj_check].size(); 
+                if (set_size < THRESHOLD) {
+                	min_set_index = entry_index; 
+                	hj = hj_check; 
+                	break; 
+                }
+                if (set_size < min_size) {
+                	min_size = set_size; 
+                	hj = hj_check; 
+                	min_set_index = entry_index; 
+                }
             }
+            Entry<K, V> entry = iSet.get(min_set_index); 
+            K key = entry.key; 
+            
             acquire(key);
             List<Entry<K,V>> jSet = table[j][hj];
             try {

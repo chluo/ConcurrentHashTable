@@ -1,3 +1,5 @@
+package HashTable;
+
 /**
  * Created by Liheng on 11/7/16.
  */

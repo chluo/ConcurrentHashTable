@@ -7,13 +7,13 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
- * Created by Liheng on 11/9/16.
+ * Created by Chunheng on 11/11, 2016
  */
-public class RefinableCuckooHashTable<K,V> extends PhasedCuckooHashTable<K,V> {
+public class RefinableAssociativeCuckooHashTable<K,V> extends AssociativeCuckooHashTable<K,V> {
     AtomicMarkableReference<Thread> owner;
     volatile ReentrantLock[][] locks;
 
-    public RefinableCuckooHashTable(int capacity) {
+    public RefinableAssociativeCuckooHashTable(int capacity) {
         super(capacity);
         locks = new ReentrantLock[2][capacity];
         for (int i = 0; i < 2; i++) {
