@@ -113,6 +113,7 @@ public class newMain {
         hashtableList.add(new StripedCuckooHashTable<Integer, Integer>(size_of_hashtable));
         hashtableList.add(new RefinableCuckooHashTable<Integer, Integer>(size_of_hashtable));
         //hashtableList.add(new CoarseCuckooHashTable<Integer, Integer>(size_of_hashtable));
+        hashtableList.add(new ConcurrentHopscotchHashTable<Integer, Integer>(size_of_hashtable,runs_per_algorithm));
 
 		/*
 		 * threadpool for synchronization
@@ -166,6 +167,7 @@ public class newMain {
                 case 3: System.out.println("StripedCuckooHashTable ----------------------------"); break;
                 case 4: System.out.println("RefinableCuckooHashTable ----------------------------"); break;
                 //case 4: System.out.println("CoarseCuckooHashTable ----------------------------"); break;
+                case 5: System.out.println("HopscotchHashTable ----------------------------"); break;
             }
 
             System.out.println("- Time Used: " + (double)totalTime/runs_per_algorithm/1000000 + " Milliseconds");
