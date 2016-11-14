@@ -55,9 +55,9 @@ public class newMain {
 		/**
 		 * This part used to table the testing parameter as you like
 		 */
-        int num_thread = 8; 
+        int num_thread = 32; 
         int num_op_per_thread = 1_000_000; 
-        int key_range = (int) Math.pow(2, 18); 
+        int key_range = (int) Math.pow(2, 11); 
         int get_perc = 0; 
         int put_perc = 50; 
         int remove_perc = 50;
@@ -76,7 +76,7 @@ public class newMain {
 		/**
 		 * int curHashTableIndex;
 		 *
-		 * Index for hashtable in hashtableList:
+		 * Index for hashtable in hashtableList ... 
 		 * 0. LockFreeHashTable              Lock-free, split ordered
 		 * 1. CoarseHashTable                Lock-based, coarse grained
 		 * 2. RefinableHashTable             Lock-based, fine grained, lock array resizable
@@ -86,7 +86,8 @@ public class newMain {
 		 * 6. RefinableAssociativeCuckooHashTable
 		 * 7. RefinableNRECuckooHashTable
 		 * 8. RefinableLRECuckooHashTable
-		 * 9. ConcurrentHopscotchHashMap
+		 * 9. ThreadSafeCuckooHashMap        Lock-free
+		 *10. ConcurrentHopscotchHashMap
 		 */
         ArrayList<Map<Integer, Integer>> hashtableList = new ArrayList<Map<Integer, Integer>>();
         /* 0 */ hashtableList.add(new LockFreeHashTable<Integer, Integer>(max_num_buckets));
@@ -98,13 +99,15 @@ public class newMain {
         /* 6 */ hashtableList.add(new RefinableAssociativeCuckooHashTable<Integer, Integer>(size_of_hashtable)); 
         /* 7 */ hashtableList.add(new RefinableNRECuckooHashTable<Integer, Integer>(size_of_hashtable)); 
         /* 8 */ hashtableList.add(new RefinableLRECuckooHashTable<Integer, Integer>(size_of_hashtable)); 
-        /* 9 */ hashtableList.add(new ConcurrentHopscotchHashMap<Integer, Integer>(max_num_buckets, num_thread));
+        /* 9 */ hashtableList.add(new ThreadSafeCuckooHashMap<Integer, Integer>(8*max_num_buckets));
+        /*10 */ hashtableList.add(new ConcurrentHopscotchHashMap<Integer, Integer>(max_num_buckets, num_thread));
 
 		/**
 		 * threadpool for synchronization
 		 */
-        // int testSet[] = {1, 2, 3, 5, 6, 7, 8}; 
-        int testSet[] = {/*0,*/ 9}; 
+        int testSet[] = {1, 2, 3, 5, 6, 7, 8}; 
+        // int testSet[] = {/*0,*/ 10}; 
+        // int testSet[] = {9};
         
         // Random numbers to be applied to the hash tables under test
         ArrayList<ArrayList<Integer>> randArray = new ArrayList<>(); 
@@ -159,16 +162,17 @@ public class newMain {
             // Display the current hashing algorithm
             System.out.println(); 
             switch (curHashTableIndex) {
-                case 0: System.out.println("LockFreeHashTable -----------------------------"); break;
-                case 1: System.out.println("CoarseHashTable -------------------------------"); break;
-                case 2: System.out.println("RefinableHashTable ----------------------------"); break;
-                case 3: System.out.println("RefinableDirCuckooHashTable -------------------"); break;
-                case 4: System.out.println("StripedCuckooHashTable ------------------------"); break;
-                case 5: System.out.println("RefinableCuckooHashTable ----------------------"); break;
-                case 6: System.out.println("RefinableAssociativeCuckooHashTable -----------"); break;
-                case 7: System.out.println("RefinableNRECuckooHashTable -------------------"); break;
-                case 8: System.out.println("RefinableLRECuckooHashTable -------------------"); break;
-                case 9: System.out.println("ConcurrentHopscotchHashMap --------------------"); break;
+                case 0 : System.out.println("LockFreeHashTable -----------------------------"); break;
+                case 1 : System.out.println("CoarseHashTable -------------------------------"); break;
+                case 2 : System.out.println("RefinableHashTable ----------------------------"); break;
+                case 3 : System.out.println("RefinableDirCuckooHashTable -------------------"); break;
+                case 4 : System.out.println("StripedCuckooHashTable ------------------------"); break;
+                case 5 : System.out.println("RefinableCuckooHashTable ----------------------"); break;
+                case 6 : System.out.println("RefinableAssociativeCuckooHashTable -----------"); break;
+                case 7 : System.out.println("RefinableNRECuckooHashTable -------------------"); break;
+                case 8 : System.out.println("RefinableLRECuckooHashTable -------------------"); break;
+                case 9 : System.out.println("ThreadSafeCuckooHashMap -----------------------"); break;
+                case 10: System.out.println("ConcurrentHopscotchHashMap --------------------"); break;
             }
             
             // remove the max and min sample 
