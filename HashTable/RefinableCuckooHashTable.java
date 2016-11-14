@@ -1,7 +1,7 @@
 package HashTable;
 
 import java.util.ArrayList;
-import java.util.List;
+import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicMarkableReference;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -72,21 +72,21 @@ public class RefinableCuckooHashTable<K,V> extends PhasedCuckooHashTable<K,V> {
                 }
                 quiesce();
                 capacity = 2 * capacity;
-                List<Entry<K,V>>[][] oldTable = table;
-                table = (List<Entry<K,V>>[][]) new List[2][capacity];
+                ArrayList<Entry<K,V>>[][] oldTable = table;
+                table = (ArrayList<Entry<K,V>>[][]) new ArrayList[2][capacity];
                 locks = new ReentrantLock[2][capacity];
                 for (int i = 0; i < 2; i++) {
                     for (int j = 0; j < capacity; j++) {
                         locks[i][j] = new ReentrantLock();
                     }
                 }
-                for (List<Entry<K,V>>[] row : table) {
+                for (ArrayList<Entry<K,V>>[] row : table) {
                     for (int i = 0; i < row.length; i++) {
                         row[i]  = new ArrayList<Entry<K,V>>(PROBE_SIZE);
                     }
                 }
-                for (List<Entry<K,V>>[] row : oldTable) {
-                    for (List<Entry<K,V>> set : row) {
+                for (ArrayList<Entry<K,V>>[] row : oldTable) {
+                    for (ArrayList<Entry<K,V>> set : row) {
                         for (Entry<K,V> e : set) {
                             put(e.key, e.value);
                         }

@@ -9,11 +9,11 @@ import java.util.concurrent.locks.ReentrantLock;
 /**
  * Created by Chunheng on 11/11, 2016
  */
-public class RefinableAssociativeCuckooHashTable<K,V> extends AssociativeCuckooHashTable<K,V> {
+public class RefinableDirCuckooHashTable<K,V> extends DirCuckooHashTable<K,V> {
     AtomicMarkableReference<Thread> owner;
     volatile ReentrantLock[][] locks;
 
-    public RefinableAssociativeCuckooHashTable(int capacity) {
+    public RefinableDirCuckooHashTable(int capacity) {
         super(capacity);
         locks = new ReentrantLock[2][capacity];
         for (int i = 0; i < 2; i++) {
@@ -62,7 +62,8 @@ public class RefinableAssociativeCuckooHashTable<K,V> extends AssociativeCuckooH
     /**
      * double the set size
      */
-    public void resize() {
+    @SuppressWarnings("unchecked")
+	public void resize() {
     	// System.out.println("Resize called"); 
         int oldCapacity = capacity;
         Thread me = Thread.currentThread();

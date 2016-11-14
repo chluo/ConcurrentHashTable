@@ -1,14 +1,14 @@
 package HashTable;
 
 import java.util.ArrayList;
-import java.util.ArrayList;
 
 /**
- * Created by Liheng on 11/8/16.
+ * Created by Chunheng on 11/11, 2016
+ * Associative Cuckoo Hash Table
  */
-public abstract class PhasedCuckooHashTable<K,V> implements Map<K,V> {
+public abstract class LRECuckooHashTable<K,V> implements Map<K,V> {
     volatile int capacity;
-    volatile ArrayList<Entry<K,V>>[][] table;
+    volatile ArrayList<CountedEntry<K,V>>[][] table;
     // resize when overflow reaches this size
     static final int PROBE_SIZE = 8;
     static final int THRESHOLD = PROBE_SIZE / 2;
@@ -23,12 +23,13 @@ public abstract class PhasedCuckooHashTable<K,V> implements Map<K,V> {
      * Create new set holding at least this many entries.
      * @param size number of entries to expect
      */
-    public PhasedCuckooHashTable(int size) {
+    @SuppressWarnings("unchecked")
+	public LRECuckooHashTable(int size) {
         capacity = size;
-        table = (ArrayList<Entry<K,V>>[][]) new java.util.ArrayList[2][capacity];
+        table = (ArrayList<CountedEntry<K,V>>[][]) new ArrayList[2][capacity];
         for (int i = 0; i < 2; i++) {
             for (int j = 0; j < capacity; j++) {
-                table[i][j] = new ArrayList<Entry<K,V>>(PROBE_SIZE);
+                table[i][j] = new ArrayList<CountedEntry<K,V>>(PROBE_SIZE);
             }
         }
     }
@@ -44,14 +45,14 @@ public abstract class PhasedCuckooHashTable<K,V> implements Map<K,V> {
     public boolean containsKey(K key) {
         acquire(key);
         try {
-            ArrayList<Entry<K,V>> set0 = table[0][hash0(key) % capacity];
-            for(Entry<K,V> e: set0) {
+            ArrayList<CountedEntry<K,V>> set0 = table[0][hash0(key) % capacity];
+            for(CountedEntry<K,V> e: set0) {
                 if (e.key.equals(key)) {
                     return true;
                 }
             }
-            ArrayList<Entry<K,V>> set1 = table[1][hash1(key) % capacity];
-            for(Entry<K,V> e: set1) {
+            ArrayList<CountedEntry<K,V>> set1 = table[1][hash1(key) % capacity];
+            for(CountedEntry<K,V> e: set1) {
                 if (e.key.equals(key)) {
                     return true;
                 }
@@ -73,16 +74,16 @@ public abstract class PhasedCuckooHashTable<K,V> implements Map<K,V> {
     public V remove(K key) {
         acquire(key);
         try {
-            ArrayList<Entry<K,V>> set0 = table[0][hash0(key) % capacity];
-            for(Entry<K,V> e: set0) {
+            ArrayList<CountedEntry<K,V>> set0 = table[0][hash0(key) % capacity];
+            for(CountedEntry<K,V> e: set0) {
                 if (e.key.equals(key)) {
                     V result = e.value;
                     set0.remove(e);
                     return result;
                 }
             }
-            ArrayList<Entry<K,V>> set1 = table[1][hash1(key) % capacity];
-            for(Entry<K,V> e: set1) {
+            ArrayList<CountedEntry<K,V>> set1 = table[1][hash1(key) % capacity];
+            for(CountedEntry<K,V> e: set1) {
                 if (e.key.equals(key)) {
                     V result = e.value;
                     set1.remove(e);
@@ -98,15 +99,15 @@ public abstract class PhasedCuckooHashTable<K,V> implements Map<K,V> {
     public V get(K key) {
         acquire(key);
         try {
-            ArrayList<Entry<K,V>> set0 = table[0][hash0(key) % capacity];
-            for(Entry<K,V> e: set0) {
+            ArrayList<CountedEntry<K,V>> set0 = table[0][hash0(key) % capacity];
+            for(CountedEntry<K,V> e: set0) {
                 if (e.key.equals(key)) {
                     V result = e.value;
                     return result;
                 }
             }
-            ArrayList<Entry<K,V>> set1 = table[1][hash1(key) % capacity];
-            for(Entry<K,V> e: set1) {
+            ArrayList<CountedEntry<K,V>> set1 = table[1][hash1(key) % capacity];
+            for(CountedEntry<K,V> e: set1) {
                 if (e.key.equals(key)) {
                     V result = e.value;
                     return result;
@@ -125,23 +126,23 @@ public abstract class PhasedCuckooHashTable<K,V> implements Map<K,V> {
         int i = -1, h = -1;
         boolean mustResize = false;
         try {
-            ArrayList<Entry<K,V>> set0 = table[0][h0];
-            for(Entry<K,V> e: set0) {
+            ArrayList<CountedEntry<K,V>> set0 = table[0][h0];
+            for(CountedEntry<K,V> e: set0) {
                 if (e.key.equals(key)) {
                     V result = e.value;
                     e.value = value;
                     return result;
                 }
             }
-            ArrayList<Entry<K,V>> set1 = table[1][h1];
-            for(Entry<K,V> e: set1) {
+            ArrayList<CountedEntry<K,V>> set1 = table[1][h1];
+            for(CountedEntry<K,V> e: set1) {
                 if (e.key.equals(key)) {
                     V result = e.value;
                     e.value = value;
                     return result;
                 }
             }
-            Entry<K,V> entry = new Entry<K, V>(key.hashCode(),key,value);
+            CountedEntry<K,V> entry = new CountedEntry<K, V>(key.hashCode(),key,value);
             if (set0.size() < THRESHOLD) {
                 set0.add(entry);
                 return null;
@@ -162,8 +163,10 @@ public abstract class PhasedCuckooHashTable<K,V> implements Map<K,V> {
         }
         if (mustResize) {
             resize();
+            // System.out.println("Must Resize"); 
             put(key, value);
         } else if (!relocate(i, h)) {
+        	// System.out.println("Relocate failed"); 
             resize();
         }
         return null;  // x must have been present
@@ -176,23 +179,44 @@ public abstract class PhasedCuckooHashTable<K,V> implements Map<K,V> {
     public abstract void resize();
 
     protected boolean relocate(int i, int hi) {
-        int hj = 0;
+    	// System.out.println("Relocate called");
         int j = 1 - i;
         for (int round = 0; round < LIMIT; round++) {
-            ArrayList<Entry<K,V>> iSet = table[i][hi];
+            ArrayList<CountedEntry<K,V>> iSet = table[i][hi];           
             if (iSet.isEmpty()) return true; 
-            Entry<K,V> entry = iSet.get(0);
-            K key = entry.key;
-            switch (i) {
-                case 0: hj = hash1(entry.key) % capacity; break;
-                case 1: hj = hash0(entry.key) % capacity; break;
+            /** 
+             * Replacement policy: Least Relocated Entry (LRE)  
+             */ 
+            int min_reloc = Integer.MAX_VALUE; 
+            int select_index = 0; 
+            int hj = 0; 
+            for (int entry_index = 0; entry_index < iSet.size(); entry_index++) {
+            	CountedEntry<K, V> entry_check = iSet.get(entry_index); 
+                int entry_cnt = entry_check.cnt; 
+                if (entry_cnt == 0) {
+                	select_index = entry_index; 
+                	break; 
+                }
+                if (entry_cnt < min_reloc) {
+                	min_reloc = entry_cnt; 
+                	select_index = entry_index; 
+                }
             }
+            CountedEntry<K, V> entry = iSet.get(select_index); 
+            K key = entry.key; 
+            switch (i) {
+        		case 0: hj = hash1(key) % capacity; break;
+        		case 1: hj = hash0(key) % capacity; break;
+            }
+            // 
+            
             acquire(key);
-            ArrayList<Entry<K,V>> jSet = table[j][hj];
+            ArrayList<CountedEntry<K,V>> jSet = table[j][hj];
             try {
                 if (iSet.remove(entry)) {
+                	entry.cnt++; 
                     if (jSet.size() < THRESHOLD) {
-                        jSet.add(entry);
+                        jSet.add(entry);                        
                         return true;
                     } else if (jSet.size() < PROBE_SIZE) {
                         jSet.add(entry);
@@ -217,8 +241,8 @@ public abstract class PhasedCuckooHashTable<K,V> implements Map<K,V> {
 
     public boolean check() {
         for (int i = 0; i < capacity; i++) {
-            ArrayList<Entry<K,V>> set = table[0][i];
-            for (Entry<K,V> e: set) {
+            ArrayList<CountedEntry<K,V>> set = table[0][i];
+            for (CountedEntry<K,V> e: set) {
                 if ((hash0(e.key) % capacity) != i) {
                     System.out.printf("Unexpected value %d at table[0][%d] hash %d\n",
                             e, i, hash0(e.key) % capacity);
@@ -227,8 +251,8 @@ public abstract class PhasedCuckooHashTable<K,V> implements Map<K,V> {
             }
         }
         for (int i = 0; i < capacity; i++) {
-            ArrayList<Entry<K,V>> set = table[1][i];
-            for (Entry<K,V> e: set) {
+            ArrayList<CountedEntry<K,V>> set = table[1][i];
+            for (CountedEntry<K,V> e: set) {
                 if ((hash1(e.key) % capacity) != i) {
                     System.out.printf("Unexpected value %d at table[0][%d] hash %d\n",
                             e, i, hash1(e.key) % capacity);
@@ -240,14 +264,14 @@ public abstract class PhasedCuckooHashTable<K,V> implements Map<K,V> {
     }
 
 //    private boolean present(K key) {
-//        ArrayList<Entry<K,V>> set0 = table[0][hash0(key) % capacity];
-//        for(Entry<K,V> e: set0) {
+//        ArrayList<CountedEntry<K,V>> set0 = table[0][hash0(key) % capacity];
+//        for(CountedEntry<K,V> e: set0) {
 //            if (e.key.equals(key)) {
 //                return true;
 //            }
 //        }
-//        ArrayList<Entry<K,V>> set1 = table[1][hash1(key) % capacity];
-//        for(Entry<K,V> e: set1) {
+//        ArrayList<CountedEntry<K,V>> set1 = table[1][hash1(key) % capacity];
+//        for(CountedEntry<K,V> e: set1) {
 //            if (e.key.equals(key)) {
 //                return true;
 //            }
@@ -258,7 +282,7 @@ public abstract class PhasedCuckooHashTable<K,V> implements Map<K,V> {
     public boolean check(int expectedSize) {
         int size = 0;
         for (int i = 0; i < capacity; i++) {
-            for (Entry<K,V> entry : table[0][i]) {
+            for (CountedEntry<K,V> entry : table[0][i]) {
                 if (entry != null) {
                     size++;
                     if ((hash0(entry.key) % capacity) != i) {
@@ -268,7 +292,7 @@ public abstract class PhasedCuckooHashTable<K,V> implements Map<K,V> {
                     }
                 }
             }
-            for (Entry<K,V> e : table[1][i]) {
+            for (CountedEntry<K,V> e : table[1][i]) {
                 if (e != null) {
                     size++;
                     if ((hash1(e.key) % capacity) != i) {

@@ -1,14 +1,14 @@
 package HashTable;
 
 import java.util.ArrayList;
-import java.util.List;
 
 /**
  * Created by Chunheng on 11/11, 2016
+ * Associative Cuckoo Hash Table
  */
 public abstract class AssociativeCuckooHashTable<K,V> implements Map<K,V> {
     volatile int capacity;
-    volatile List<Entry<K,V>>[][] table;
+    volatile ArrayList<Entry<K,V>>[][] table;
     // resize when overflow reaches this size
     static final int PROBE_SIZE = 8;
     static final int THRESHOLD = PROBE_SIZE / 2;
@@ -23,9 +23,10 @@ public abstract class AssociativeCuckooHashTable<K,V> implements Map<K,V> {
      * Create new set holding at least this many entries.
      * @param size number of entries to expect
      */
-    public AssociativeCuckooHashTable(int size) {
+    @SuppressWarnings("unchecked")
+	public AssociativeCuckooHashTable(int size) {
         capacity = size;
-        table = (List<Entry<K,V>>[][]) new java.util.ArrayList[2][capacity];
+        table = (ArrayList<Entry<K,V>>[][]) new ArrayList[2][capacity];
         for (int i = 0; i < 2; i++) {
             for (int j = 0; j < capacity; j++) {
                 table[i][j] = new ArrayList<Entry<K,V>>(PROBE_SIZE);
@@ -44,13 +45,13 @@ public abstract class AssociativeCuckooHashTable<K,V> implements Map<K,V> {
     public boolean containsKey(K key) {
         acquire(key);
         try {
-            List<Entry<K,V>> set0 = table[0][hash0(key) % capacity];
+            ArrayList<Entry<K,V>> set0 = table[0][hash0(key) % capacity];
             for(Entry<K,V> e: set0) {
                 if (e.key.equals(key)) {
                     return true;
                 }
             }
-            List<Entry<K,V>> set1 = table[1][hash1(key) % capacity];
+            ArrayList<Entry<K,V>> set1 = table[1][hash1(key) % capacity];
             for(Entry<K,V> e: set1) {
                 if (e.key.equals(key)) {
                     return true;
@@ -73,7 +74,7 @@ public abstract class AssociativeCuckooHashTable<K,V> implements Map<K,V> {
     public V remove(K key) {
         acquire(key);
         try {
-            List<Entry<K,V>> set0 = table[0][hash0(key) % capacity];
+            ArrayList<Entry<K,V>> set0 = table[0][hash0(key) % capacity];
             for(Entry<K,V> e: set0) {
                 if (e.key.equals(key)) {
                     V result = e.value;
@@ -81,7 +82,7 @@ public abstract class AssociativeCuckooHashTable<K,V> implements Map<K,V> {
                     return result;
                 }
             }
-            List<Entry<K,V>> set1 = table[1][hash1(key) % capacity];
+            ArrayList<Entry<K,V>> set1 = table[1][hash1(key) % capacity];
             for(Entry<K,V> e: set1) {
                 if (e.key.equals(key)) {
                     V result = e.value;
@@ -98,14 +99,14 @@ public abstract class AssociativeCuckooHashTable<K,V> implements Map<K,V> {
     public V get(K key) {
         acquire(key);
         try {
-            List<Entry<K,V>> set0 = table[0][hash0(key) % capacity];
+            ArrayList<Entry<K,V>> set0 = table[0][hash0(key) % capacity];
             for(Entry<K,V> e: set0) {
                 if (e.key.equals(key)) {
                     V result = e.value;
                     return result;
                 }
             }
-            List<Entry<K,V>> set1 = table[1][hash1(key) % capacity];
+            ArrayList<Entry<K,V>> set1 = table[1][hash1(key) % capacity];
             for(Entry<K,V> e: set1) {
                 if (e.key.equals(key)) {
                     V result = e.value;
@@ -125,7 +126,7 @@ public abstract class AssociativeCuckooHashTable<K,V> implements Map<K,V> {
         int i = -1, h = -1;
         boolean mustResize = false;
         try {
-            List<Entry<K,V>> set0 = table[0][h0];
+            ArrayList<Entry<K,V>> set0 = table[0][h0];
             for(Entry<K,V> e: set0) {
                 if (e.key.equals(key)) {
                     V result = e.value;
@@ -133,7 +134,7 @@ public abstract class AssociativeCuckooHashTable<K,V> implements Map<K,V> {
                     return result;
                 }
             }
-            List<Entry<K,V>> set1 = table[1][h1];
+            ArrayList<Entry<K,V>> set1 = table[1][h1];
             for(Entry<K,V> e: set1) {
                 if (e.key.equals(key)) {
                     V result = e.value;
@@ -162,8 +163,10 @@ public abstract class AssociativeCuckooHashTable<K,V> implements Map<K,V> {
         }
         if (mustResize) {
             resize();
+            // System.out.println("Must Resize"); 
             put(key, value);
         } else if (!relocate(i, h)) {
+        	// System.out.println("Relocate failed"); 
             resize();
         }
         return null;  // x must have been present
@@ -176,10 +179,11 @@ public abstract class AssociativeCuckooHashTable<K,V> implements Map<K,V> {
     public abstract void resize();
 
     protected boolean relocate(int i, int hi) {
+    	// System.out.println("Relocate called");
         int j = 1 - i;
         for (int round = 0; round < LIMIT; round++) {
-            List<Entry<K,V>> iSet = table[i][hi];
-            
+            ArrayList<Entry<K,V>> iSet = table[i][hi];
+            if (iSet.isEmpty()) return true; 
             /** 
              * Replacement policy: Least Occupied Set (LOS) 
              */ 
@@ -197,6 +201,7 @@ public abstract class AssociativeCuckooHashTable<K,V> implements Map<K,V> {
                 if (set_size < THRESHOLD) {
                 	min_set_index = entry_index; 
                 	hj = hj_check; 
+                	// System.out.println("break"); 
                 	break; 
                 }
                 if (set_size < min_size) {
@@ -207,13 +212,14 @@ public abstract class AssociativeCuckooHashTable<K,V> implements Map<K,V> {
             }
             Entry<K, V> entry = iSet.get(min_set_index); 
             K key = entry.key; 
-            
-            acquire(key);
-            List<Entry<K,V>> jSet = table[j][hj];
+            // 
+                    
+            acquire(key); 
+            ArrayList<Entry<K,V>> jSet = table[j][hj];
             try {
                 if (iSet.remove(entry)) {
                     if (jSet.size() < THRESHOLD) {
-                        jSet.add(entry);
+                        jSet.add(entry);                        
                         return true;
                     } else if (jSet.size() < PROBE_SIZE) {
                         jSet.add(entry);
@@ -238,7 +244,7 @@ public abstract class AssociativeCuckooHashTable<K,V> implements Map<K,V> {
 
     public boolean check() {
         for (int i = 0; i < capacity; i++) {
-            List<Entry<K,V>> set = table[0][i];
+            ArrayList<Entry<K,V>> set = table[0][i];
             for (Entry<K,V> e: set) {
                 if ((hash0(e.key) % capacity) != i) {
                     System.out.printf("Unexpected value %d at table[0][%d] hash %d\n",
@@ -248,7 +254,7 @@ public abstract class AssociativeCuckooHashTable<K,V> implements Map<K,V> {
             }
         }
         for (int i = 0; i < capacity; i++) {
-            List<Entry<K,V>> set = table[1][i];
+            ArrayList<Entry<K,V>> set = table[1][i];
             for (Entry<K,V> e: set) {
                 if ((hash1(e.key) % capacity) != i) {
                     System.out.printf("Unexpected value %d at table[0][%d] hash %d\n",
@@ -261,13 +267,13 @@ public abstract class AssociativeCuckooHashTable<K,V> implements Map<K,V> {
     }
 
 //    private boolean present(K key) {
-//        List<Entry<K,V>> set0 = table[0][hash0(key) % capacity];
+//        ArrayList<Entry<K,V>> set0 = table[0][hash0(key) % capacity];
 //        for(Entry<K,V> e: set0) {
 //            if (e.key.equals(key)) {
 //                return true;
 //            }
 //        }
-//        List<Entry<K,V>> set1 = table[1][hash1(key) % capacity];
+//        ArrayList<Entry<K,V>> set1 = table[1][hash1(key) % capacity];
 //        for(Entry<K,V> e: set1) {
 //            if (e.key.equals(key)) {
 //                return true;

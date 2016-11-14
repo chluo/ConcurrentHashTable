@@ -9,11 +9,11 @@ import java.util.concurrent.locks.ReentrantLock;
 /**
  * Created by Chunheng on 11/11, 2016
  */
-public class RefinableAssociativeCuckooHashTable<K,V> extends AssociativeCuckooHashTable<K,V> {
+public class RefinableLRECuckooHashTable<K,V> extends LRECuckooHashTable<K,V> {
     AtomicMarkableReference<Thread> owner;
     volatile ReentrantLock[][] locks;
 
-    public RefinableAssociativeCuckooHashTable(int capacity) {
+    public RefinableLRECuckooHashTable(int capacity) {
         super(capacity);
         locks = new ReentrantLock[2][capacity];
         for (int i = 0; i < 2; i++) {
@@ -73,22 +73,22 @@ public class RefinableAssociativeCuckooHashTable<K,V> extends AssociativeCuckooH
                 }
                 quiesce();
                 capacity = 2 * capacity;
-                ArrayList<Entry<K,V>>[][] oldTable = table;
-                table = (ArrayList<Entry<K,V>>[][]) new ArrayList[2][capacity];
+                ArrayList<CountedEntry<K,V>>[][] oldTable = table;
+                table = (ArrayList<CountedEntry<K,V>>[][]) new ArrayList[2][capacity];
                 locks = new ReentrantLock[2][capacity];
                 for (int i = 0; i < 2; i++) {
                     for (int j = 0; j < capacity; j++) {
                         locks[i][j] = new ReentrantLock();
                     }
                 }
-                for (ArrayList<Entry<K,V>>[] row : table) {
+                for (ArrayList<CountedEntry<K,V>>[] row : table) {
                     for (int i = 0; i < row.length; i++) {
-                        row[i]  = new ArrayList<Entry<K,V>>(PROBE_SIZE);
+                        row[i]  = new ArrayList<CountedEntry<K,V>>(PROBE_SIZE);
                     }
                 }
-                for (ArrayList<Entry<K,V>>[] row : oldTable) {
-                    for (ArrayList<Entry<K,V>> set : row) {
-                        for (Entry<K,V> e : set) {
+                for (ArrayList<CountedEntry<K,V>>[] row : oldTable) {
+                    for (ArrayList<CountedEntry<K,V>> set : row) {
+                        for (CountedEntry<K,V> e : set) {
                             put(e.key, e.value);
                         }
                     }

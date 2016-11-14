@@ -4,13 +4,13 @@ import java.util.ArrayList;
 import java.util.ArrayList;
 
 /**
- * Created by Liheng on 11/8/16.
+ * Created by Chunheng on 11/12/16.
  */
-public abstract class PhasedCuckooHashTable<K,V> implements Map<K,V> {
+public abstract class DirCuckooHashTable<K,V> implements Map<K,V> {
     volatile int capacity;
     volatile ArrayList<Entry<K,V>>[][] table;
     // resize when overflow reaches this size
-    static final int PROBE_SIZE = 8;
+    static final int PROBE_SIZE = 2;
     static final int THRESHOLD = PROBE_SIZE / 2;
     // resize when chain of phases exceeds this
     static final int LIMIT = 8;
@@ -23,7 +23,7 @@ public abstract class PhasedCuckooHashTable<K,V> implements Map<K,V> {
      * Create new set holding at least this many entries.
      * @param size number of entries to expect
      */
-    public PhasedCuckooHashTable(int size) {
+    public DirCuckooHashTable(int size) {
         capacity = size;
         table = (ArrayList<Entry<K,V>>[][]) new java.util.ArrayList[2][capacity];
         for (int i = 0; i < 2; i++) {
@@ -175,7 +175,7 @@ public abstract class PhasedCuckooHashTable<K,V> implements Map<K,V> {
 
     public abstract void resize();
 
-    protected boolean relocate(int i, int hi) {
+    protected boolean relocate(int i, int hi) {   	
         int hj = 0;
         int j = 1 - i;
         for (int round = 0; round < LIMIT; round++) {

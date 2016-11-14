@@ -9,11 +9,11 @@ import java.util.concurrent.locks.ReentrantLock;
 /**
  * Created by Chunheng on 11/11, 2016
  */
-public class RefinableAssociativeCuckooHashTable<K,V> extends AssociativeCuckooHashTable<K,V> {
+public class RefinableNRECuckooHashTable<K,V> extends NRECuckooHashTable<K,V> {
     AtomicMarkableReference<Thread> owner;
     volatile ReentrantLock[][] locks;
 
-    public RefinableAssociativeCuckooHashTable(int capacity) {
+    public RefinableNRECuckooHashTable(int capacity) {
         super(capacity);
         locks = new ReentrantLock[2][capacity];
         for (int i = 0; i < 2; i++) {
@@ -73,22 +73,22 @@ public class RefinableAssociativeCuckooHashTable<K,V> extends AssociativeCuckooH
                 }
                 quiesce();
                 capacity = 2 * capacity;
-                ArrayList<Entry<K,V>>[][] oldTable = table;
-                table = (ArrayList<Entry<K,V>>[][]) new ArrayList[2][capacity];
+                ArrayList<TaggedEntry<K,V>>[][] oldTable = table;
+                table = (ArrayList<TaggedEntry<K,V>>[][]) new ArrayList[2][capacity];
                 locks = new ReentrantLock[2][capacity];
                 for (int i = 0; i < 2; i++) {
                     for (int j = 0; j < capacity; j++) {
                         locks[i][j] = new ReentrantLock();
                     }
                 }
-                for (ArrayList<Entry<K,V>>[] row : table) {
+                for (ArrayList<TaggedEntry<K,V>>[] row : table) {
                     for (int i = 0; i < row.length; i++) {
-                        row[i]  = new ArrayList<Entry<K,V>>(PROBE_SIZE);
+                        row[i]  = new ArrayList<TaggedEntry<K,V>>(PROBE_SIZE);
                     }
                 }
-                for (ArrayList<Entry<K,V>>[] row : oldTable) {
-                    for (ArrayList<Entry<K,V>> set : row) {
-                        for (Entry<K,V> e : set) {
+                for (ArrayList<TaggedEntry<K,V>>[] row : oldTable) {
+                    for (ArrayList<TaggedEntry<K,V>> set : row) {
+                        for (TaggedEntry<K,V> e : set) {
                             put(e.key, e.value);
                         }
                     }
